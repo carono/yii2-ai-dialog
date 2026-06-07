@@ -12,6 +12,13 @@
     ],
     "homepage": "https://github.com/carono/yii2-ai-dialog",
     "license": "BSD-3-Clause",
+    "authors": [
+        {
+            "name": "Aleksandr Kasyanov",
+            "homepage": "https://carono.ru",
+            "email": "info@carono.ru"
+        }
+    ],
     "support": {
         "issues": "https://github.com/carono/yii2-ai-dialog/issues?state=open",
         "source": "https://github.com/carono/yii2-ai-dialog",
