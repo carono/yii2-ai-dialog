@@ -15,7 +15,14 @@
 [![type-coverage](https://shepherd.dev/github/carono/yii2-ai-dialog/coverage.svg)](https://shepherd.dev/github/carono/yii2-ai-dialog)
 [![psalm-level](https://shepherd.dev/github/carono/yii2-ai-dialog/level.svg)](https://shepherd.dev/github/carono/yii2-ai-dialog)
 
-The package ...
+This package embeds the [ai-dialog](https://github.com/carono/ai-dialog) AI chat widget into a
+Yii2 application: a 💬 button in the page corner that sends the current page context to a shared
+gateway and streams the answer back. It is wired up **like the debug toolbar** — through
+`bootstrap` in the dev section of the config, guarded by IP. Nothing is added to the project's
+code (layout, assets): the widget bundle `widget.js` is pulled in as an npm-asset Composer
+dependency and wired up automatically.
+
+> 🇷🇺 Документация на русском: [`docs/README.ru.md`](docs/README.ru.md).
 
 ## Requirements
 
@@ -23,13 +30,101 @@ The package ...
 
 ## Installation
 
-The package could be installed with [Composer](https://getcomposer.org):
+The widget bundle is distributed as an npm-asset (`npm-asset/carono-ai-dialog-widget`) and pulled
+in by Composer. Because Composer does not inherit repositories from dependencies, the **consuming
+project's `composer.json`** must enable asset-packagist once:
+
+```jsonc
+{
+    "repositories": [
+        { "type": "composer", "url": "https://asset-packagist.org" }
+    ],
+    "config": {
+        "allow-plugins": {
+            "composer/installers": true,
+            "oomphinc/composer-installers-extender": true
+        }
+    },
+    "extra": {
+        "installer-types": ["npm-asset"],
+        "installer-paths": {
+            "vendor/npm-asset/{$name}": ["type:npm-asset"]
+        }
+    }
+}
+```
+
+Then:
 
 ```shell
 composer require carono/yii2-ai-dialog
 ```
 
-## General usage
+> If Composer reports `npm-asset/carono-ai-dialog-widget could not be found`, asset-packagist has
+> not indexed the package yet. As a temporary workaround add an inline repository to the project
+> and re-run `require`:
+>
+> ```json
+> {
+>     "type": "package",
+>     "package": {
+>         "name": "npm-asset/carono-ai-dialog-widget",
+>         "version": "0.2.0",
+>         "type": "npm-asset",
+>         "dist": { "type": "tar", "url": "https://registry.npmjs.org/carono-ai-dialog-widget/-/carono-ai-dialog-widget-0.2.0.tgz" }
+>     }
+> }
+> ```
+
+## Setup
+
+All configuration lives in the config, in the dev section. As with `yii2-debug`, wrap the
+registration in `YII_ENV_DEV` so the widget never reaches production.
+
+`config/web.php`:
+
+```php
+$config = [ /* ... */ ];
+
+if (YII_ENV_DEV) {
+    $config['bootstrap'][] = 'aiDialog';
+    $config['modules']['aiDialog'] = [
+        'class'   => \Carono\AiDialog\Module::class,
+        'project' => 'myapp',          // = the project key in the gateway's projects.json
+        'token'   => 'project-secret', // = this project's token on the gateway
+        // optional:
+        // 'gateway'    => 'wss://wss.carono.site', // gateway address (this is the default)
+        // 'allowedIPs' => ['127.0.0.1', '::1'],    // who sees the widget (same as debug)
+        // 'enabled'    => true,                    // master switch
+    ];
+
+    // usually already present for debug/gii:
+    // $config['bootstrap'][] = 'debug';
+    // $config['modules']['debug'] = ['class' => \yii\debug\Module::class];
+}
+```
+
+Three values must match the gateway side (`projects.json`):
+
+| Module option | What it is | Must match |
+|---|---|---|
+| `project` | project identifier | the object key in `projects.json` |
+| `token`   | project secret     | the `token` field of that project |
+| `gateway` | WebSocket gateway address | the shared `wss://wss.carono.site` |
+
+Registering a project on the gateway and the overall architecture are described in
+`docs/INTEGRATION.md` of the [ai-dialog](https://github.com/carono/ai-dialog) repository.
+In short: add a project entry to `projects.json` and restart the gateway.
+
+### How it works
+
+The module implements `BootstrapInterface`. On every request it checks the client IP against
+`allowedIPs` (the same logic as `yii\debug\Module`) and, if access is allowed and the response
+is a regular HTML page, appends a `<script src=".../widget.js" data-project data-gateway
+data-token>` tag at the end of `<body>`. JSON/AJAX responses are left untouched.
+
+> Widget access is restricted by `allowedIPs` only; that is enough for local development.
+> Protection of the gateway itself (the project token) lives on its side.
 
 ## Documentation
 
