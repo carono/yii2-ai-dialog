@@ -12,25 +12,25 @@ use yii\web\Application;
 use yii\web\View;
 
 /**
- * Модуль подключения dev-виджета ai-dialog к Yii2-приложению.
+ * Module that attaches the ai-dialog dev widget to a Yii2 application.
  *
- * Работает по тому же принципу, что и панель отладки (`yii\debug\Module`):
- * регистрируется в `bootstrap`, на каждый HTTP-запрос проверяет доступ по IP и,
- * если он разрешён, дописывает в конец `<body>` тег `<script>` виджета.
- * Вся настройка — в конфиге, в dev-секции приложения. В код проекта (layout,
- * assets) ничего добавлять не нужно.
+ * Works the same way as the debug panel (`yii\debug\Module`):
+ * it is registered in `bootstrap`, checks IP access on every HTTP request and,
+ * if access is allowed, appends the widget's `<script>` tag to the end of `<body>`.
+ * All configuration lives in the config, in the app's dev section. Nothing needs to be
+ * added to the project code (layout, assets).
  *
- * Пример (`config/web.php`):
+ * Example (`config/web.php`):
  *
  * ```php
  * if (YII_ENV_DEV) {
  *     $config['bootstrap'][] = 'aiDialog';
  *     $config['modules']['aiDialog'] = [
  *         'class'   => \Carono\AiDialog\Module::class,
- *         'project' => 'myapp',                 // = ключ в projects.json шлюза
- *         'token'   => 'секрет-проекта',        // = token этого проекта
- *         'gateway' => 'wss://your-gateway.example', // адрес вашего шлюза
- *         // 'allowedIPs' => ['127.0.0.1', '::1'],    // как у debug-панели
+ *         'project' => 'myapp',                 // = key in the gateway's projects.json
+ *         'token'   => 'project-secret',        // = token of this project
+ *         'gateway' => 'wss://your-gateway.example', // address of your gateway
+ *         // 'allowedIPs' => ['127.0.0.1', '::1'],    // same as the debug panel
  *     ];
  * }
  * ```
@@ -38,33 +38,33 @@ use yii\web\View;
 class Module extends BaseModule implements BootstrapInterface
 {
     /**
-     * @var string[] список IP-адресов, которым разрешён виджет. Поддерживает
-     * wildcard в конце (`192.168.*`) и `*` — «всем». По умолчанию — только
-     * локальные адреса, как у панели отладки.
+     * @var string[] list of IP addresses allowed to use the widget. Supports
+     * a trailing wildcard (`192.168.*`) and `*` — "everyone". By default — only
+     * local addresses, like the debug panel.
      */
     public array $allowedIPs = ['127.0.0.1', '::1'];
 
     /**
-     * @var string|null идентификатор проекта (`data-project`). Должен совпадать
-     * с ключом в `projects.json` шлюза. Без него виджет не подключается.
+     * @var string|null project identifier (`data-project`). Must match
+     * the key in the gateway's `projects.json`. Without it the widget is not attached.
      */
     public ?string $project = null;
 
     /**
-     * @var string адрес WebSocket-шлюза (`data-gateway`), например `wss://your-gateway.example`.
-     * Пусто — атрибут не выставляется, и виджет использует свой дефолт
-     * (`ws://<хост-страницы>:8787`), что удобно для локального шлюза.
+     * @var string WebSocket gateway address (`data-gateway`), e.g. `wss://your-gateway.example`.
+     * Empty — the attribute is not set, and the widget uses its own default
+     * (`ws://<page-host>:8787`), which is convenient for a local gateway.
      */
     public string $gateway = '';
 
     /**
-     * @var string|null секрет проекта (`data-token`). Должен совпадать с `token`
-     * проекта в `projects.json`. Если на шлюзе токен задан — обязателен.
+     * @var string|null project secret (`data-token`). Must match the project's `token`
+     * in `projects.json`. Required if a token is set on the gateway.
      */
     public ?string $token = null;
 
     /**
-     * @var bool общий выключатель. Удобно гасить виджет, не убирая конфиг.
+     * @var bool global switch. Handy to turn the widget off without removing the config.
      */
     public bool $enabled = true;
 
@@ -76,7 +76,7 @@ class Module extends BaseModule implements BootstrapInterface
 
         $app->on(Application::EVENT_BEFORE_REQUEST, function () use ($app): void {
             if ($this->project === null || $this->project === '') {
-                Yii::warning('AI Dialog: не задан "project", виджет отключён.', __METHOD__);
+                Yii::warning('AI Dialog: "project" is not set, the widget is disabled.', __METHOD__);
                 return;
             }
             if (!$this->checkAccess()) {
@@ -87,9 +87,9 @@ class Module extends BaseModule implements BootstrapInterface
     }
 
     /**
-     * Регистрирует ассет виджета в конце `<body>`. Вызывается по событию
-     * View::EVENT_END_BODY, поэтому срабатывает только для обычных страниц с
-     * layout'ом, но не для JSON/AJAX-ответов.
+     * Registers the widget asset at the end of `<body>`. Called on the
+     * View::EVENT_END_BODY event, so it fires only for regular pages with a
+     * layout, but not for JSON/AJAX responses.
      */
     public function registerWidget(Event $event): void
     {
@@ -100,8 +100,8 @@ class Module extends BaseModule implements BootstrapInterface
         /** @var View $view */
         $view = $event->sender;
 
-        // Первый элемент — имя файла, остальные ключи становятся HTML-атрибутами
-        // тега <script>. Виджет читает их через document.currentScript.dataset.
+        // The first element is the file name, the remaining keys become HTML attributes
+        // of the <script> tag. The widget reads them via document.currentScript.dataset.
         $js = [
             'widget.js',
             'data-project' => $this->project,
@@ -113,8 +113,8 @@ class Module extends BaseModule implements BootstrapInterface
             $js['data-token'] = $this->token;
         }
 
-        // Переопределяем только список js (с data-атрибутами); sourcePath
-        // (@npm/carono-ai-dialog-widget) берётся из самого AiDialogAsset.
+        // Override only the js list (with data attributes); sourcePath
+        // (@npm/carono-ai-dialog-widget) is taken from AiDialogAsset itself.
         Yii::$app->getAssetManager()->bundles[AiDialogAsset::class] = [
             'js' => [$js],
         ];
@@ -123,7 +123,7 @@ class Module extends BaseModule implements BootstrapInterface
     }
 
     /**
-     * Проверка доступа по IP — логика идентична `yii\debug\Module::checkAccess()`.
+     * IP access check — the logic is identical to `yii\debug\Module::checkAccess()`.
      */
     protected function checkAccess(): bool
     {
@@ -137,7 +137,7 @@ class Module extends BaseModule implements BootstrapInterface
                 return true;
             }
         }
-        Yii::warning('Доступ к виджету AI Dialog запрещён для IP ' . $ip . '.', __METHOD__);
+        Yii::warning('Access to the AI Dialog widget denied for IP ' . $ip . '.', __METHOD__);
         return false;
     }
 }
