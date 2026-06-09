@@ -98,7 +98,7 @@ if (YII_ENV_DEV) {
         'project' => 'myapp',           // = ключ проекта в projects.json шлюза
         'token'   => 'секрет-проекта',  // = token этого проекта на шлюзе
         // необязательные:
-        // 'gateway'    => 'wss://wss.carono.site', // адрес шлюза (значение по умолчанию)
+        // 'gateway'    => 'wss://your-gateway.example', // удалённый шлюз; пусто — локальный ws://<хост>:8787
         // 'allowedIPs' => ['127.0.0.1', '::1'],    // кому показывать (как у debug)
         // 'enabled'    => true,                    // общий выключатель
     ];
@@ -115,7 +115,7 @@ if (YII_ENV_DEV) {
 |---|---|---|
 | `project` | идентификатор проекта | ключ объекта в `projects.json` |
 | `token`   | секрет проекта        | поле `token` этого проекта |
-| `gateway` | адрес WebSocket-шлюза | общий `wss://wss.carono.site` |
+| `gateway` | адрес WebSocket-шлюза | где доступен ваш шлюз (`wss://…`) |
 
 ## Как это работает
 

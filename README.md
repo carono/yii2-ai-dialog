@@ -114,7 +114,7 @@ if (YII_ENV_DEV) {
         'project' => 'myapp',          // = the project key in the gateway's projects.json
         'token'   => 'project-secret', // = this project's token on the gateway
         // optional:
-        // 'gateway'    => 'wss://wss.carono.site', // gateway address (this is the default)
+        // 'gateway'    => 'wss://your-gateway.example', // remote gateway; omit for local ws://<host>:8787
         // 'allowedIPs' => ['127.0.0.1', '::1'],    // who sees the widget (same as debug)
         // 'enabled'    => true,                    // master switch
     ];
@@ -131,7 +131,7 @@ Three values must match the gateway side (`projects.json`):
 |---|---|---|
 | `project` | project identifier | the object key in `projects.json` |
 | `token`   | project secret     | the `token` field of that project |
-| `gateway` | WebSocket gateway address | the shared `wss://wss.carono.site` |
+| `gateway` | WebSocket gateway address | where your gateway is reachable (`wss://…`) |
 
 ### How it works
 

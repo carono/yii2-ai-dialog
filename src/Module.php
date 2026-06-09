@@ -29,7 +29,7 @@ use yii\web\View;
  *         'class'   => \Carono\AiDialog\Module::class,
  *         'project' => 'myapp',                 // = ключ в projects.json шлюза
  *         'token'   => 'секрет-проекта',        // = token этого проекта
- *         // 'gateway'    => 'wss://wss.carono.site', // адрес шлюза (по умолчанию)
+ *         'gateway' => 'wss://your-gateway.example', // адрес вашего шлюза
  *         // 'allowedIPs' => ['127.0.0.1', '::1'],    // как у debug-панели
  *     ];
  * }
@@ -51,9 +51,11 @@ class Module extends BaseModule implements BootstrapInterface
     public ?string $project = null;
 
     /**
-     * @var string адрес WebSocket-шлюза (`data-gateway`).
+     * @var string адрес WebSocket-шлюза (`data-gateway`), например `wss://your-gateway.example`.
+     * Пусто — атрибут не выставляется, и виджет использует свой дефолт
+     * (`ws://<хост-страницы>:8787`), что удобно для локального шлюза.
      */
-    public string $gateway = 'wss://wss.carono.site';
+    public string $gateway = '';
 
     /**
      * @var string|null секрет проекта (`data-token`). Должен совпадать с `token`
@@ -103,8 +105,10 @@ class Module extends BaseModule implements BootstrapInterface
         $js = [
             'widget.js',
             'data-project' => $this->project,
-            'data-gateway' => $this->gateway,
         ];
+        if ($this->gateway !== '') {
+            $js['data-gateway'] = $this->gateway;
+        }
         if ($this->token !== null && $this->token !== '') {
             $js['data-token'] = $this->token;
         }
