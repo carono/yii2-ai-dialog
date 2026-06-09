@@ -1,5 +1,9 @@
 # yii2-ai-dialog Change Log
 
+## 1.1.2
+
+- Code comments and log warnings translated to English (no behavior change).
+
 ## 1.1.1
 
 - Removed the hardcoded personal gateway default from `Module`. `gateway` now defaults to empty;
