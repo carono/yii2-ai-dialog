@@ -39,7 +39,7 @@
         "php": "^8.1",
         "yiisoft/yii2": "^2.0",
         "oomphinc/composer-installers-extender": "^2.0",
-        "npm-asset/carono-ai-dialog-widget": "^0.2.0"
+        "npm-asset/carono-ai-dialog-widget": "@stable"
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.89.1",

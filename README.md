@@ -24,6 +24,27 @@ dependency and wired up automatically.
 
 > 🇷🇺 Документация на русском: [`docs/README.ru.md`](docs/README.ru.md).
 
+## Architecture — what you are installing
+
+This Composer package is **only the client**. It injects a small `widget.js` that, by itself,
+does nothing useful — it needs a separate shared service, the **gateway**:
+
+```
+Widget on the page ──wss──► Gateway (one shared service) ──► AI engine (with access to your repo)
+```
+
+The gateway accepts widget connections and, by the `project` + `token` pair, routes the request
+to the configured AI engine (e.g. Claude Code with read access to your repository). One gateway
+serves all projects. So a working setup always has **two sides**:
+
+1. **Client (this package)** — `bootstrap` + module config in your Yii2 app (below).
+2. **Gateway** — your project registered in its `projects.json`, gateway running and reachable
+   over `wss`. See [The gateway](#the-gateway).
+
+You don't have to memorize this: **the widget guides you**. Once it appears, open it — on any
+connection problem it shows exactly what is wrong (gateway down, project not registered, wrong
+token) and copy-paste-ready steps to fix it.
+
 ## Requirements
 
 - PHP 8.1 or higher.
@@ -112,10 +133,6 @@ Three values must match the gateway side (`projects.json`):
 | `token`   | project secret     | the `token` field of that project |
 | `gateway` | WebSocket gateway address | the shared `wss://wss.carono.site` |
 
-Registering a project on the gateway and the overall architecture are described in
-`docs/INTEGRATION.md` of the [ai-dialog](https://github.com/carono/ai-dialog) repository.
-In short: add a project entry to `projects.json` and restart the gateway.
-
 ### How it works
 
 The module implements `BootstrapInterface`. On every request it checks the client IP against
@@ -125,6 +142,60 @@ data-token>` tag at the end of `<body>`. JSON/AJAX responses are left untouched.
 
 > Widget access is restricted by `allowedIPs` only; that is enough for local development.
 > Protection of the gateway itself (the project token) lives on its side.
+
+## The gateway
+
+The gateway is the shared service the widget talks to (see [Architecture](#architecture--what-you-are-installing)).
+You do **not** set up a server, nginx, or certificates per project — that part is shared and
+already running. To connect a new project you only:
+
+1. **Register the project** in the gateway's `projects.json`:
+
+   ```json
+   "myapp": {
+     "endpoint": "claude-code",
+     "repoPath": "/absolute/path/to/repo",
+     "token": "project-secret",
+     "allowWrite": false
+   }
+   ```
+   - `endpoint` — `claude-code` (agent with read access to the repo), `dashboard` (answers from
+     page content only), or `opencode` (not implemented yet).
+   - `repoPath` — absolute path to the repo root (required for `claude-code`).
+   - `token` — must equal the module's `token`.
+   - `allowWrite` — keep `false`: the agent can only read code, not change files.
+
+2. **Restart the gateway** (it reads the registry on start) and confirm your project is listed:
+
+   ```bash
+   curl -s http://127.0.0.1:8787/health   # {"ok":true,"projects":["myapp", ...]}
+   ```
+
+If you don't run the gateway yourself, ask its owner to add your project and give you the token.
+
+The full, step-by-step runbook — also written so an **AI agent** can deploy the gateway and wire
+a project end-to-end — is [`docs/INTEGRATION.md`](https://github.com/carono/ai-dialog/blob/master/docs/INTEGRATION.md)
+in the [ai-dialog](https://github.com/carono/ai-dialog) repository.
+
+## Troubleshooting
+
+Open the widget first — its panel names the exact problem and shows copy-paste steps. Reference:
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| No 💬 button at all | `aiDialog` not in `$config['bootstrap']` | Add `$config['bootstrap'][] = 'aiDialog';` |
+| No 💬 button | `project` not set | Set the `project` option (the module skips injection without it; see the warning in the log) |
+| No 💬 button | request IP not in `allowedIPs` | Add your IP to `allowedIPs` (default is localhost only) |
+| No 💬 button | page is JSON/AJAX or has no layout | The widget injects only into regular HTML pages (`endBody`) |
+| Button shows, banner **"Шлюз недоступен"** | gateway not running / not proxied | Start the gateway; check `curl …/health`; ensure `wss` proxy + DNS |
+| Banner **"Проект не заведён"** | `project` missing in `projects.json` | Add the project entry and restart the gateway |
+| Banner **"Неверный токен"** | `token` ≠ gateway's `token` | Align the module `token` with `projects.json`, then reload the page |
+
+After changing the config, clear published assets and hard-reload (Ctrl+F5):
+
+```bash
+rm -rf web/assets/*
+```
 
 ## Documentation
 
